@@ -16,8 +16,8 @@ class Category (C : HomStruct) where
   comp : {c d e : C.obj} -> C.hom c d -> C.hom d e -> C.hom c e
   id_comp : {c d : C.obj} -> (f : C.hom c d) -> ((comp (id' c) f) = f)
   comp_id : {c d : C.obj} -> (f : C.hom c d) -> ((comp f (id' d)) = f)
-  assoc : {a b c d : C.obj} -> (f : C.hom a b) -> (g : C.hom b c) -> (h : C.hom c d)
-      -> comp (comp f g) h = comp f (comp g h)
+  assoc : {a b c d : C.obj} -> (f : C.hom a b) -> (g : C.hom b c)
+      -> (h : C.hom c d) -> comp (comp f g) h = comp f (comp g h)
 
 notation:80 lhs " ∘ " rhs:81  => Category.comp rhs lhs
 
