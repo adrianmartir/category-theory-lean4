@@ -1,6 +1,5 @@
 {
-  # Using this flake is not a long-term solution. I need to build my own infrastructure for compiling files with nix.
-  description = "Formalizing category theory naturally";
+  description = "A formalization of category theory in Lean 4";
 
   inputs.lean.url = github:leanprover/lean4;
   inputs.flake-utils.url = github:numtide/flake-utils;
