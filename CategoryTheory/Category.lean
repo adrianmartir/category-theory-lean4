@@ -302,13 +302,6 @@ theorem y_fully_faithful: fully_faithful (y (C := C)) := by
     exact yoneda
   ⟩
 
-
-
--- Redo part of Riehl's universal properties chapter as an 'application' of the Yoneda lemma.
--- Motto: The functor category has many good properties, and we can use it to characterize arrows into a fictional object. Then we can decide whether it exists.
-
 end Yoneda
-
--- We can start limits and colimits here..
 
 end CategoryTheory
