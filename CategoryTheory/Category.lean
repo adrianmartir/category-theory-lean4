@@ -1,30 +1,54 @@
 -- Some basic Category-theoretic constructions
 namespace CategoryTheory
 
-
--- This notation is optimal, much better than what was in mathlib.
--- hom sets should always be anotated with the Category they are meant
--- to be taken on. Unlike identities and composition operators and axioms.
--- Otherwise it is very confusing when considering opposite categories.
 structure HomStruct where
   obj : Type u
   hom : obj → obj → Type v
 
 
 class Category (C : HomStruct) where
-  id' : (c : C.obj) -> C.hom c c
-  comp : {c d e : C.obj} -> C.hom c d -> C.hom d e -> C.hom c e
-  id_comp : {c d : C.obj} -> (f : C.hom c d) -> ((comp (id' c) f) = f)
-  comp_id : {c d : C.obj} -> (f : C.hom c d) -> ((comp f (id' d)) = f)
-  assoc : {a b c d : C.obj} -> (f : C.hom a b) -> (g : C.hom b c)
-      -> (h : C.hom c d) -> comp (comp f g) h = comp f (comp g h)
-
-notation:80 lhs " ∘ " rhs:81  => Category.comp rhs lhs
+  id' : (c : C.obj) → C.hom c c
+  comp : {c d e : C.obj} → C.hom c d → C.hom d e → C.hom c e
+  id_comp : {c d : C.obj} → (f : C.hom c d) → comp (id' c) f = f
+  comp_id : {c d : C.obj} → (f : C.hom c d) → comp f (id' d) = f
+  assoc : {a b c d : C.obj} → (f : C.hom a b) → (g : C.hom b c)
+      → (h : C.hom c d) → comp (comp f g) h = comp f (comp g h)
 
 open HomStruct
 open Category
 
-attribute [simp] Category.id_comp Category.comp_id Category.assoc
+notation:80 lhs " ∘ " rhs:81  => comp rhs lhs
+
+attribute [simp] id_comp comp_id assoc
+
+section Set
+
+universe u
+
+abbrev SmallCategory (C : HomStruct) := Category.{u,u} C
+abbrev LargeCategory (C : HomStruct) := Category.{u+1,u} C
+
+
+def Set : HomStruct := {
+  obj := Type u,
+  hom := fun a b => a → b
+}
+
+instance Set.Category : LargeCategory Set :=
+{ id'     := fun a x => x
+  comp    := fun f g x => g (f x)
+  id_comp := by
+    intros
+    simp [id', comp]
+  comp_id := by
+    intros
+    simp [id', comp]
+  assoc := by
+    intros
+    simp [comp]
+}
+
+end Set
 
 
 def HomStruct.opposite (C: HomStruct) : HomStruct := {
@@ -55,38 +79,10 @@ theorem opop (C: HomStruct) [Category C]: C = (C.opposite)ᵒᵖ  := by
 
 attribute [simp] opop
 
-section Set
-
-universe u
-
-abbrev SmallCategory (C : HomStruct) := Category.{u,u} C
-abbrev LargeCategory (C : HomStruct) := Category.{u+1,u} C
-
-
-def Set : HomStruct := {
-  obj := Type u,
-  hom := fun a b => a -> b
-}
-
-instance Set.Category : LargeCategory Set :=
-{ id'     := fun a x => x
-  comp    := fun f g x => g (f x)
-  id_comp := by
-    intros
-    simp [id', comp]
-  comp_id := by
-    intros
-    simp [id', comp]
-  assoc := by
-    intros
-    simp [comp]
-}
-
-end Set
 
 def inverses (C: HomStruct) [Category C] {c d: C.obj} (f: C.hom c d) (g: C.hom d c) := g ∘ f = id' c ∧ f ∘ g = id' d
 
-theorem inverse_unique (C: HomStruct) [Category C] {c d: C.obj} (f: C.hom c d) (g h: C.hom d c) : inverses C f g ∧ inverses C f h -> g = h := by
+theorem inverse_unique (C: HomStruct) [Category C] {c d: C.obj} (f: C.hom c d) (g h: C.hom d c) : inverses C f g ∧ inverses C f h → g = h := by
   intro ⟨⟨_,p⟩,⟨q,_⟩⟩
   have r : (h ∘ f) ∘ g = h := by
     rw [<- assoc, p, id_comp]
@@ -100,10 +96,10 @@ namespace Function
 
 variable {A: Type _} {B: Type _}
 
-def inverses (f: A -> B) (g: B -> A) :=
+def inverses (f: A → B) (g: B → A) :=
   (Function.comp g f = id) ∧ (Function.comp f g  = id)
 
-theorem inverses_sym (f: A -> B) (g: B -> A) : inverses f g <-> inverses g f := by
+theorem inverses_sym (f: A → B) (g: B → A) : inverses f g <-> inverses g f := by
   simp [inverses]
   exact ⟨
     by
@@ -115,16 +111,16 @@ theorem inverses_sym (f: A -> B) (g: B -> A) : inverses f g <-> inverses g f := 
   ⟩
 
 
-def isomorphism (f: A -> B) :=
-  exists (g: B -> A), inverses f g
+def isomorphism (f: A → B) :=
+  exists (g: B → A), inverses f g
 
 end Function
 
 structure Functor (C D: HomStruct) [Category C] [Category D] where
-  obj : C.obj -> D.obj
-  map : {c d : C.obj} -> C.hom c d -> D.hom (obj c) (obj d)
-  map_id : {c : C.obj} -> map (id' c) = id' (obj c)
-  map_comp : {c d e : C.obj} -> (f : C.hom c d) -> (g : C.hom d e) -> map (g ∘ f) = map g ∘ map f
+  obj : C.obj → D.obj
+  map : {c d : C.obj} → C.hom c d → D.hom (obj c) (obj d)
+  map_id : {c : C.obj} → map (id' c) = id' (obj c)
+  map_comp : {c d e : C.obj} → (f : C.hom c d) → (g : C.hom d e) → map (g ∘ f) = map g ∘ map f
 
 attribute [simp] Functor.map_id Functor.map_comp
 
@@ -138,8 +134,8 @@ variable {C : HomStruct} [Category C]
 variable {D : HomStruct} [Category D]
 
 structure NatTrans (F G : Functor C D) :=
-  app : (c : C.obj) -> D.hom (F.obj c) (G.obj c)
-  naturality : {c d : C.obj} -> (f : C.hom c d) -> app d ∘ (F.map f) = (G.map f) ∘ app c
+  app : (c : C.obj) → D.hom (F.obj c) (G.obj c)
+  naturality : {c d : C.obj} → (f : C.hom c d) → app d ∘ (F.map f) = (G.map f) ∘ app c
 
 def FunctorCat (C: HomStruct) [Category C] (D: HomStruct) [Category D]: HomStruct := {
   obj := Functor C D
@@ -166,7 +162,7 @@ def vComp {F G H : Functor C D} (η : NatTrans F G) (μ : NatTrans G H) : NatTra
     rw [Category.assoc]
 }
 
-theorem nat_ext {F G : Functor C D} : (η μ : NatTrans F G) ->(p: η.app = μ.app) -> (η = μ) := by
+theorem natext {F G : Functor C D} : (η μ : NatTrans F G) →(p: η.app = μ.app) → (η = μ) := by
   intro { app := η, naturality := _ }
   intro { app := μ, naturality := _ }
   intro p
@@ -179,19 +175,19 @@ instance : Category (FunctorCat C D) := {
   id_comp := by
     intro F G
     intro { app := η, naturality := _ }
-    apply nat_ext
+    apply natext
     simp [id', idTrans, comp, vComp]
   comp_id := by
     intro F G
     intro { app := η, naturality := _ }
-    apply nat_ext
+    apply natext
     simp [id', idTrans, comp, vComp]
   assoc := by
     intro F G H K
     intro { app := f, naturality := _ }
     intro { app := g, naturality := _ }
     intro { app := h, naturality := _ }
-    apply nat_ext
+    apply natext
     simp [comp, vComp]
 }
 
@@ -231,11 +227,11 @@ def y : Functor C (FunctorCat Cᵒᵖ Set) := {
   map := yMap
   map_id := by
     intros
-    apply nat_ext
+    apply natext
     simp [yMap, id', idTrans]
   map_comp := by
     intros
-    apply nat_ext
+    apply natext
     simp [yMap, comp, vComp]
 }
 
@@ -295,7 +291,7 @@ theorem y_fully_faithful: fully_faithful (y (C := C)) := by
     have p: yonedaMapInv c (Functor.obj y d) = y.map := by
       apply funext
       intro f
-      apply nat_ext
+      apply natext
       simp [yonedaMapInv, y, yMap, yObj]
 
     rw [<- p, Function.inverses_sym]
