@@ -124,7 +124,7 @@ structure Functor (C D: HomStruct) [Category C] [Category D] where
 
 attribute [simp] Functor.map_id Functor.map_comp
 
-theorem functext {C D : HomStruct} [Category C] [Category D]: (F G : Functor C D) → (p: F.obj = G.obj) →
+theorem Functor.ext {C D : HomStruct} [Category C] [Category D]: (F G : Functor C D) → (p: F.obj = G.obj) →
   (q: (fun c d (f: C.hom c d) => F.map f)
     ≅ (fun c d (f: C.hom c d) => G.map f))
   → F = G
@@ -174,27 +174,28 @@ instance : Category Cat where
       intros C D _ _ F
       simp [fcomp, fid]
 
-      apply functext
+      apply Functor.ext
       simp [Function.comp]
       simp
       exact HEq.rfl
 
     intro c d F
     simp
-    apply (@p c.1 d.1 c.2 d.2 F)
+    apply @p c.1 d.1 c.2 d.2
 
   comp_id := by
     have p : (c d: HomStruct) -> [Category c] -> [Category d] -> (F: Functor c d) -> fcomp F fid = F := by
       intros C D _ _ F
       simp [fcomp, fid]
 
-      apply functext
+      apply Functor.ext
       simp [Function.comp]
+      simp
       exact HEq.rfl
 
     intro c d F
     simp
-    apply (@p c.1 d.1 c.2 d.2 F)
+    apply @p c.1 d.1 c.2 d.2
 
   assoc := by
     have p : (a b c d: HomStruct)
@@ -209,7 +210,7 @@ instance : Category Cat where
 
     intros a b c d F G H
     simp
-    apply (@p a.1 b.1 c.1 d.1 a.2 b.2 c.2 d.2)
+    apply @p a.1 b.1 c.1 d.1 a.2 b.2 c.2 d.2
 
 
 def fully_faithful {C: HomStruct} [Category C] {D: HomStruct} [Category D] (F: Functor C D) :=
@@ -224,7 +225,7 @@ structure NatTrans (F G : Functor C D) :=
   app : (c : C.obj) → D.hom (F.obj c) (G.obj c)
   naturality : {c d : C.obj} → (f : C.hom c d) → app d ∘ (F.map f) = (G.map f) ∘ app c
 
-theorem natext {F G : Functor C D} : (η μ : NatTrans F G) → (p: η.app = μ.app) → (η = μ) := by
+theorem NatTrans.ext {F G : Functor C D} : (η μ : NatTrans F G) → (p: η.app = μ.app) → (η = μ) := by
   intro { app := η, naturality := _ }
   intro { app := μ, naturality := _ }
   -- Note: One can apply `simp` here which automatically
@@ -264,15 +265,15 @@ instance : Category (FunctorCat C D) := {
   comp    := vComp,
   id_comp := by
     intros
-    apply natext
+    apply NatTrans.ext
     simp [id', idTrans, comp, vComp]
   comp_id := by
     intros
-    apply natext
+    apply NatTrans.ext
     simp [id', idTrans, comp, vComp]
   assoc := by
     intros
-    apply natext
+    apply NatTrans.ext
     simp [comp, vComp]
 }
 
@@ -312,11 +313,11 @@ def y : Functor C (FunctorCat Cᵒᵖ Set) := {
   map := yMap
   map_id := by
     intros
-    apply natext
+    apply NatTrans.ext
     simp [yMap, id', idTrans]
   map_comp := by
     intros
-    apply natext
+    apply NatTrans.ext
     simp [yMap, comp, vComp]
 }
 
@@ -371,7 +372,7 @@ theorem y_fully_faithful: fully_faithful (y (C := C)) := by
   exact ⟨ yonedaMap c (y.obj d), by
     have p: yonedaMapInv c (Functor.obj y d) = y.map := by
       funext f
-      apply natext
+      apply NatTrans.ext
       simp [yonedaMapInv, y, yMap, yObj]
 
     rw [<- p, Function.inverses_sym]
