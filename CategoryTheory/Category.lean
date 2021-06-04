@@ -124,6 +124,93 @@ structure Functor (C D: HomStruct) [Category C] [Category D] where
 
 attribute [simp] Functor.map_id Functor.map_comp
 
+theorem functext {C D : HomStruct} [Category C] [Category D]: (F G : Functor C D) → (p: F.obj = G.obj) →
+  (q: (fun c d (f: C.hom c d) => F.map f)
+    ≅ (fun c d (f: C.hom c d) => G.map f))
+  → F = G
+  := by
+  intro { obj := F, map := FMap, ..}
+  intro { obj := G, map := GMap, ..}
+  intro p q
+  simp at p q
+  simp -- applies propext
+  exact ⟨p,q⟩
+
+
+def fid {C: HomStruct} [Category C] : Functor C C := {
+  obj := id
+  map := id
+  map_id := by
+    intros
+    rfl
+  map_comp := by
+    intros
+    rfl
+}
+
+def fcomp {C D E: HomStruct} [Category C] [Category D] [Category E] (F: Functor C D) (G: Functor D E) : Functor C E := {
+  obj := Function.comp G.obj F.obj
+  map := fun f => G.map (F.map f)
+  map_id := by
+    intros
+    simp
+  map_comp := by
+    intros
+    simp
+}
+
+def Cat : HomStruct.{max (u + 1) (v + 1), max u v} := {
+  obj := Σ C: HomStruct.{u,v}, Category C,
+  hom := fun C D => @Functor C.1 D.1 C.2 D.2
+}
+
+instance : Category Cat where
+  id' := fun {c} => @fid c.1 c.2
+  comp := fun {c d e} F G => @fcomp c.1 d.1 e.1 c.2 d.2 e.2 F G
+  id_comp := by
+    -- We can only prove the goal if we explitly undo the bundling
+    -- and instantiate the `Category` typeclasses
+    have p : (c d: HomStruct) -> [Category c] -> [Category d] -> (F: Functor c d) -> fcomp fid F = F := by
+      intros C D _ _ F
+      simp [fcomp, fid]
+
+      apply functext
+      simp [Function.comp]
+      simp
+      exact HEq.rfl
+
+    intro c d F
+    simp
+    apply (@p c.1 d.1 c.2 d.2 F)
+
+  comp_id := by
+    have p : (c d: HomStruct) -> [Category c] -> [Category d] -> (F: Functor c d) -> fcomp F fid = F := by
+      intros C D _ _ F
+      simp [fcomp, fid]
+
+      apply functext
+      simp [Function.comp]
+      exact HEq.rfl
+
+    intro c d F
+    simp
+    apply (@p c.1 d.1 c.2 d.2 F)
+
+  assoc := by
+    have p : (a b c d: HomStruct)
+      -> [Category a] -> [Category b] -> [Category c] -> [Category d]
+      -> (F: Functor a b)
+      -> (G: Functor b c)
+      -> (H: Functor c d)
+      -> fcomp (fcomp F G) H = fcomp F (fcomp G H) := by
+      intros
+      simp [fcomp]
+      exact HEq.rfl
+
+    intros a b c d F G H
+    simp
+    apply (@p a.1 b.1 c.1 d.1 a.2 b.2 c.2 d.2)
+
 
 def fully_faithful {C: HomStruct} [Category C] {D: HomStruct} [Category D] (F: Functor C D) :=
   forall c d : C.obj, Function.isomorphism (F.map (c := c) (d := d))
@@ -136,6 +223,16 @@ variable {D : HomStruct} [Category D]
 structure NatTrans (F G : Functor C D) :=
   app : (c : C.obj) → D.hom (F.obj c) (G.obj c)
   naturality : {c d : C.obj} → (f : C.hom c d) → app d ∘ (F.map f) = (G.map f) ∘ app c
+
+theorem natext {F G : Functor C D} : (η μ : NatTrans F G) → (p: η.app = μ.app) → (η = μ) := by
+  intro { app := η, naturality := _ }
+  intro { app := μ, naturality := _ }
+  -- Note: One can apply `simp` here which automatically
+  -- applies the substitution.
+  intro p
+  subst p
+  simp
+
 
 def FunctorCat (C: HomStruct) [Category C] (D: HomStruct) [Category D]: HomStruct := {
   obj := Functor C D
@@ -162,31 +259,19 @@ def vComp {F G H : Functor C D} (η : NatTrans F G) (μ : NatTrans G H) : NatTra
     rw [Category.assoc]
 }
 
-theorem natext {F G : Functor C D} : (η μ : NatTrans F G) →(p: η.app = μ.app) → (η = μ) := by
-  intro { app := η, naturality := _ }
-  intro { app := μ, naturality := _ }
-  intro p
-  subst p
-  simp
-
 instance : Category (FunctorCat C D) := {
   id'     := idTrans,
   comp    := vComp,
   id_comp := by
-    intro F G
-    intro { app := η, naturality := _ }
+    intros
     apply natext
     simp [id', idTrans, comp, vComp]
   comp_id := by
-    intro F G
-    intro { app := η, naturality := _ }
+    intros
     apply natext
     simp [id', idTrans, comp, vComp]
   assoc := by
-    intro F G H K
-    intro { app := f, naturality := _ }
-    intro { app := g, naturality := _ }
-    intro { app := h, naturality := _ }
+    intros
     apply natext
     simp [comp, vComp]
 }
@@ -248,7 +333,7 @@ def yonedaMapInv (c : C.obj) (F: Functor Cᵒᵖ Set.{v}) (x: F.obj c) : NatTran
     intros h
     -- It honestly is a bit confusing not knowing in which category
     -- the composition takes place
-    have p: comp (C := C) f h = comp (C := Cᵒᵖ) h f  := Eq.refl _
+    have p: comp (C := C) f h = comp (C := Cᵒᵖ) h f  := by rfl
     rw [p, Functor.map_comp]
     simp [comp]
 }
@@ -261,20 +346,16 @@ theorem yoneda (c : C.obj) (F: Functor Cᵒᵖ Set.{v}) : Function.inverses (yon
     apply funext
     intro { app := η, naturality := nat }
     simp [comp,id',y,yObj]
-    apply funext
-    intros d
-    apply funext
-    intros f
+    funext d f
     -- Rewrite the application in the goal as a composition in order
     -- to apply naturality
-    have p: F.map f (η c (id' c)) = (comp (η c) (F.map f)) (id' c) := Eq.refl _
+    have p: F.map f (η c (id' c)) = (comp (η c) (F.map f)) (id' c) := by rfl
     rw [p, <- nat f]
     simp [y, yObj, comp],
   by
     simp [yonedaMap, yonedaMapInv, Function.comp]
-    apply funext
-    intro x
-    have p: id' (C := C) c = id' (C := Cᵒᵖ) c  := Eq.refl _
+    funext x
+    have p: id' (C := C) c = id' (C := Cᵒᵖ) c  := by rfl
     rw [p, Functor.map_id]
     simp [id']
 ⟩
@@ -289,8 +370,7 @@ theorem y_fully_faithful: fully_faithful (y (C := C)) := by
 
   exact ⟨ yonedaMap c (y.obj d), by
     have p: yonedaMapInv c (Functor.obj y d) = y.map := by
-      apply funext
-      intro f
+      funext f
       apply natext
       simp [yonedaMapInv, y, yMap, yObj]
 
