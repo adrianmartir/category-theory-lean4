@@ -1,4 +1,4 @@
--- Some basic Category-theoretic constructions
+-- Some basic category-theoretic constructions
 namespace CategoryTheory
 
 structure HomStruct where
@@ -287,7 +287,6 @@ def yObj (c: C.obj) : (Functor Cᵒᵖ Set.{v}) := {
       simp [comp]
   }
 
--- notation "Hom(-," arg ")"  => yObj arg
 
 def yMap {c d: C.obj} (f: C.hom c d) : NatTrans (yObj c) (yObj d) := {
   app := fun c g => f ∘ g
@@ -309,7 +308,6 @@ def y : Functor C (FunctorCat Cᵒᵖ Set) := {
     simp [yMap, comp, vComp]
 }
 
--- At this point I should talk about representability and give a few examples - It should be emphazised how important that concept is
 
 def yonedaMap (c : C.obj) (F: Functor Cᵒᵖ Set.{v}) (η: NatTrans (y.obj c) F) : F.obj c := η.app c (id' c)
 
