@@ -21,31 +21,39 @@ notation:80 lhs " ∘ " rhs:81  => comp rhs lhs
 
 attribute [simp] id_comp comp_id assoc
 
+
+structure BundledCategory where
+  base : HomStruct
+  inst : Category base
+
+instance (C: BundledCategory) : Category C.base := C.inst
+
 section Set
 
 universe u
 
-abbrev SmallCategory (C : HomStruct) := Category.{u,u} C
-abbrev LargeCategory (C : HomStruct) := Category.{u+1,u} C
+abbrev SmallCategory := BundledCategory.{u,u}
+abbrev LargeCategory := BundledCategory.{u+1,u}
 
 
-def Set : HomStruct := {
-  obj := Type u,
-  hom := fun a b => a → b
-}
-
-instance Set.Category : LargeCategory Set :=
-{ id'     := fun a x => x
-  comp    := fun f g x => g (f x)
-  id_comp := by
-    intros
-    simp [id', comp]
-  comp_id := by
-    intros
-    simp [id', comp]
-  assoc := by
-    intros
-    simp [comp]
+def Set : LargeCategory := {
+  base := {
+    obj := Type u,
+    hom := fun a b => a → b
+  },
+  inst := {
+    id':= fun a x => x
+    comp := fun f g x => g (f x)
+    id_comp := by
+      intros
+      simp [id', comp]
+    comp_id := by
+      intros
+      simp [id', comp]
+    assoc := by
+      intros
+      simp [comp]
+  }
 }
 
 end Set
@@ -164,13 +172,6 @@ def fComp {C D E: HomStruct} [Category C] [Category D] [Category E] (F: Functor 
     intros
     simp
 }
-
-
-structure BundledCategory where
-  base : HomStruct
-  inst : Category base
-
-instance (C: BundledCategory) : Category C.base := C.inst
 
 def Cat : HomStruct.{max (u + 1) (v + 1), max u v} := {
   obj := BundledCategory.{u,v},
