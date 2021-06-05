@@ -175,7 +175,7 @@ instance : Category Cat where
   id' := fun {C} => fId C.base
   comp := fComp
   id_comp := by
-    intros C D F
+    intros
     simp [fComp, fId]
 
     apply Functor.ext
@@ -184,7 +184,7 @@ instance : Category Cat where
     exact HEq.rfl
 
   comp_id := by
-    intros C D F
+    intros
     simp [fComp, fId]
 
     apply Functor.ext
@@ -214,22 +214,21 @@ structure NatTrans (F G : Functor C D) :=
   app : (c : C.obj) → D.hom (F.obj c) (G.obj c)
   naturality : {c d : C.obj} → (f : C.hom c d) → app d ∘ (F.map f) = (G.map f) ∘ app c
 
+open NatTrans
+
 theorem NatTrans.ext {F G : Functor C D} : (η μ : NatTrans F G) → (p: η.app = μ.app) → (η = μ) := by
-  intro { app := η, naturality := _ }
-  intro { app := μ, naturality := _ }
-  -- Note: One can apply `simp` here which automatically
-  -- applies the substitution.
+  intro { app := η, .. }
+  intro { app := μ, .. }
   intro p
-  subst p
-  simp
+  simp at p
+  simp -- applies propext
+  exact p
 
 
 def FunctorCat (C: HomStruct) [Category C] (D: HomStruct) [Category D]: HomStruct := {
   obj := Functor C D
   hom := NatTrans
 }
-
-open NatTrans
 
 def idTrans (F : Functor C D) : NatTrans F F := {
   app := fun c => id' (Functor.obj F c),
@@ -329,7 +328,6 @@ def yonedaMapInv (c : C.obj) (F: Functor Cᵒᵖ Set.{v}) (x: F.obj c) : NatTran
 }
 
 
--- Ahh, now I get it. This doesn't work because we don't have cumulative universes and the objects between which we are taking the maps are not exactly one universe below the morphism
 theorem yoneda (c : C.obj) (F: Functor Cᵒᵖ Set.{v}) : Function.inverses (yonedaMap c F) (yonedaMapInv c F) := ⟨
   by
     simp [yonedaMap, yonedaMapInv]
