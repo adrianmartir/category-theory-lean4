@@ -137,7 +137,7 @@ theorem Functor.ext {C D : HomStruct} [Category C] [Category D]: (F G : Functor 
   exact ⟨p,q⟩
 
 
-def fid {C: HomStruct} [Category C] : Functor C C := {
+def fId {C: HomStruct} [Category C] : Functor C C := {
   obj := id
   map := id
   map_id := by
@@ -148,7 +148,7 @@ def fid {C: HomStruct} [Category C] : Functor C C := {
     rfl
 }
 
-def fcomp {C D E: HomStruct} [Category C] [Category D] [Category E] (F: Functor C D) (G: Functor D E) : Functor C E := {
+def fComp {C D E: HomStruct} [Category C] [Category D] [Category E] (F: Functor C D) (G: Functor D E) : Functor C E := {
   obj := Function.comp G.obj F.obj
   map := fun f => G.map (F.map f)
   map_id := by
@@ -165,14 +165,14 @@ def Cat : HomStruct.{max (u + 1) (v + 1), max u v} := {
 }
 
 instance : Category Cat where
-  id' := fun {c} => @fid c.1 c.2
-  comp := fun {c d e} F G => @fcomp c.1 d.1 e.1 c.2 d.2 e.2 F G
+  id' := fun {c} => @fId c.1 c.2
+  comp := fun {c d e} F G => @fComp c.1 d.1 e.1 c.2 d.2 e.2 F G
   id_comp := by
     -- We can only prove the goal if we explitly undo the bundling
     -- and instantiate the `Category` typeclasses
-    have p : (c d: HomStruct) -> [Category c] -> [Category d] -> (F: Functor c d) -> fcomp fid F = F := by
+    have p : (c d: HomStruct) -> [Category c] -> [Category d] -> (F: Functor c d) -> fComp fId F = F := by
       intros C D _ _ F
-      simp [fcomp, fid]
+      simp [fComp, fId]
 
       apply Functor.ext
       simp [Function.comp]
@@ -184,9 +184,9 @@ instance : Category Cat where
     apply @p c.1 d.1 c.2 d.2
 
   comp_id := by
-    have p : (c d: HomStruct) -> [Category c] -> [Category d] -> (F: Functor c d) -> fcomp F fid = F := by
+    have p : (c d: HomStruct) -> [Category c] -> [Category d] -> (F: Functor c d) -> fComp F fId = F := by
       intros C D _ _ F
-      simp [fcomp, fid]
+      simp [fComp, fId]
 
       apply Functor.ext
       simp [Function.comp]
@@ -203,9 +203,9 @@ instance : Category Cat where
       -> (F: Functor a b)
       -> (G: Functor b c)
       -> (H: Functor c d)
-      -> fcomp (fcomp F G) H = fcomp F (fcomp G H) := by
+      -> fComp (fComp F G) H = fComp F (fComp G H) := by
       intros
-      simp [fcomp]
+      simp [fComp]
       exact HEq.rfl
 
     intros a b c d F G H
