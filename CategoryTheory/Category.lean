@@ -137,7 +137,7 @@ theorem Functor.ext {C D : HomStruct} [Category C] [Category D]: (F G : Functor 
   exact ⟨p,q⟩
 
 
-def fId {C: HomStruct} [Category C] : Functor C C := {
+def fId (C: HomStruct) [Category C] : Functor C C := {
   obj := id
   map := id
   map_id := by
@@ -159,58 +159,47 @@ def fComp {C D E: HomStruct} [Category C] [Category D] [Category E] (F: Functor 
     simp
 }
 
+
+structure BundledCategory where
+  base : HomStruct
+  inst : Category base
+
+instance (C: BundledCategory) : Category C.base := C.inst
+
 def Cat : HomStruct.{max (u + 1) (v + 1), max u v} := {
-  obj := Σ C: HomStruct.{u,v}, Category C,
-  hom := fun C D => @Functor C.1 D.1 C.2 D.2
+  obj := BundledCategory.{u,v},
+  hom := fun C D => Functor C.base D.base
 }
 
 instance : Category Cat where
-  id' := fun {c} => @fId c.1 c.2
-  comp := fun {c d e} F G => @fComp c.1 d.1 e.1 c.2 d.2 e.2 F G
+  id' := fun {C} => fId C.base
+  comp := fComp
   id_comp := by
-    -- We can only prove the goal if we explitly undo the bundling
-    -- and instantiate the `Category` typeclasses
-    have p : (c d: HomStruct) -> [Category c] -> [Category d] -> (F: Functor c d) -> fComp fId F = F := by
-      intros C D _ _ F
-      simp [fComp, fId]
+    intros C D F
+    simp [fComp, fId]
 
-      apply Functor.ext
-      simp [Function.comp]
-      simp
-      exact HEq.rfl
-
-    intro c d F
+    apply Functor.ext
+    simp [Function.comp]
     simp
-    apply @p c.1 d.1 c.2 d.2
+    exact HEq.rfl
 
   comp_id := by
-    have p : (c d: HomStruct) -> [Category c] -> [Category d] -> (F: Functor c d) -> fComp F fId = F := by
-      intros C D _ _ F
-      simp [fComp, fId]
+    intros C D F
+    simp [fComp, fId]
 
-      apply Functor.ext
-      simp [Function.comp]
-      simp
-      exact HEq.rfl
-
-    intro c d F
+    apply Functor.ext
+    simp [Function.comp]
     simp
-    apply @p c.1 d.1 c.2 d.2
+    exact HEq.rfl
 
   assoc := by
-    have p : (a b c d: HomStruct)
-      -> [Category a] -> [Category b] -> [Category c] -> [Category d]
-      -> (F: Functor a b)
-      -> (G: Functor b c)
-      -> (H: Functor c d)
-      -> fComp (fComp F G) H = fComp F (fComp G H) := by
-      intros
-      simp [fComp]
-      exact HEq.rfl
+    intros
+    simp [fComp]
 
-    intros a b c d F G H
+    apply Functor.ext
+    simp [Function.comp]
     simp
-    apply @p a.1 b.1 c.1 d.1 a.2 b.2 c.2 d.2
+    exact HEq.rfl
 
 
 def fully_faithful {C: HomStruct} [Category C] {D: HomStruct} [Category D] (F: Functor C D) :=
