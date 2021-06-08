@@ -37,6 +37,12 @@ attribute [simp] id_comp comp_id assoc
 -- It seems like some of the yoneda proofs need to be repaired to
 -- work with bundled categories, but I think I will refactor this to
 -- use unification hints for `∘` anyways.
+
+-- Note that the current approach will inevitably cause trouble when
+-- one tries to build an algebra-hierarchy for structures on
+-- categories, since we can't automatically bundle and unbundle things.
+-- Unification hints provide a solution:
+-- https://github.com/leanprover/lean4/blob/master/tests/lean/unifHintAndTC.lean#L46-L53
 structure Category where
   base : HomStruct
   inst : IsCategory base
