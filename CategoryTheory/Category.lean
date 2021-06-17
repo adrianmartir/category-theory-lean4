@@ -55,12 +55,24 @@ def Category.hom (C: Category) := C.base.hom
 -- Bundled to unbundled automatic conversion
 instance (C: Category) : IsCategory C.base := C.inst
 
+-- This is not exactly a monoidal category but it doesn't
+-- matter for experimenting with our hybrid bundled +
+-- unbundled approach  n
+class IsMonoidal (C: HomStruct) extends IsCategory C where
+  tensor : C.obj -> C.obj -> C.obj
+
+structure MonoidalCat where
+  base : HomStruct
+  inst : IsMonoidal base
+
+instance (C: MonoidalCat) : IsMonoidal C.base := C.inst
+
 def bundle (C: HomStruct) [inst: IsCategory C] : Category where
   base := C
   inst := inst
 
 -- Unbundled to bundled automatic conversion
--- THIS CAN ONLY CONSTRUCT IMPLICIT CATEGORY ARGUMENTS!
+-- THIS CAN ONLY CONSTRUCT METAVARIABLES!
 unif_hint (C : Category) (base : HomStruct) [IsCategory base] where
   C =?= bundle base
   |-
@@ -142,6 +154,38 @@ theorem inverse_unique (C: Category) {c d: C.obj} (f: C.hom c d) (g h: C.base.ho
 
 def isomorphism (C: Category) {c d: C.obj} (f: C.hom c d) :=
   exists (g: C.hom d c), inverses C f g
+
+-- Here we can automatically construct the `Category` term
+-- by using the unification hint aaa
+def isomorphism' (C: HomStruct) [IsCategory C] {c d: C.obj} (f: C.hom c d) := isomorphism _ f
+
+-- Use that `IsMonoidal -> IsCategory`
+def isomorphismM' (C: HomStruct) [IsMonoidal C] {c d: C.obj} (f: C.hom c d) := isomorphism' C f
+
+-- It is actually quite surprising that this works
+def isomorphismM'' (C: HomStruct) [IsMonoidal C] {c d: C.obj} (f: C.hom c d) := isomorphism _ f
+
+-- Weird, lean cannot find the `IsCategory` instance, although it could find `IsMonoidal` above
+-- def isomorphismM''' (C: MonoidalCat) {c d: C.base.obj} (f: C.base.hom c d) := isomorphism' C.base f
+
+-- If we explicitaly instantiate `IsCategory` the example works and moreover we can work with
+-- fully bundled structure:
+
+instance (C: MonoidalCat) : IsCategory C.base := C.inst.toIsCategory
+def isomorphismM (C: MonoidalCat) {c d: C.base.obj} (f: C.base.hom c d) := isomorphism _ f
+
+-- While it seems that we technically can automatically *unbundle* and then *bundle*
+-- structures, it does not seem to be possible to perform typeclass resolution in between.
+
+-- This seems very fixable, but it goes to show that unification hints are immature
+-- and that I should expect to run into many similar limitations. Maybe this feature does not
+-- exist due to performance limitation, who knows?
+
+-- It seems like unification hints would make such a my hybrid bundled-unbundled style
+-- possible in principle (After all it **worked** if we explictly wrote the `IsCategory`
+-- instance), but it would
+-- a) Introducing complication by using an untested feature (unification hints) and
+-- b) Increase confusion by using two different inference mechanisms
 
 namespace Function
 
