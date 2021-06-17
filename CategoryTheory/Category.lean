@@ -52,7 +52,19 @@ def Category.obj (C: Category) := C.base.obj
 
 def Category.hom (C: Category) := C.base.hom
 
+-- Bundled to unbundled automatic conversion
 instance (C: Category) : IsCategory C.base := C.inst
+
+def bundle (C: HomStruct) [inst: IsCategory C] : Category where
+  base := C
+  inst := inst
+
+-- Unbundled to bundled automatic conversion
+-- THIS CAN ONLY CONSTRUCT IMPLICIT CATEGORY ARGUMENTS!
+unif_hint (C : Category) (base : HomStruct) [IsCategory base] where
+  C =?= bundle base
+  |-
+  C.base =?= base
 
 section Set
 
@@ -63,11 +75,11 @@ abbrev LargeCategory := Category.{u+1,u}
 
 
 -- Note that we don't even to construct this by providing an instance
-def Set : LargeCategory := {
+def Set : LargeCategory where
   base := {
     obj := Type u,
     hom := fun a b => a → b
-  },
+  }
   inst := {
     id':= fun a x => x
     comp := fun f g x => g (f x)
@@ -81,7 +93,6 @@ def Set : LargeCategory := {
       intros
       simp [comp]
   }
-}
 
 end Set
 
@@ -319,6 +330,8 @@ def yObj (c: C.obj) : (Functor Cᵒᵖ Set.{v}) := {
       -- While it seems like the lhs can be simplified, this is not true
       -- since `id'` is in `Cᵒᵖ` and not in `C`
       -- I need a better solution for this...
+      -- We could try to state this lemma in general in order to apply it
+      -- here and in similar cases
       have p: id' (C := C.base) d = id' (C := Cᵒᵖ.base) d  := by rfl
       rw [<- p]
       simp
@@ -348,7 +361,7 @@ def y : Functor C (FunctorCat Cᵒᵖ Set.{v}) := {
     intros
     apply NatTrans.ext
     funext _ _
-    simp [yObj, yMap]
+    simp [yObj, yMap, id']
   map_comp := by
     intros
     apply NatTrans.ext
