@@ -72,7 +72,13 @@ instance Category.opposite (C: HomStruct) [Category C]: Category Cᵒᵖ := {
     simp
 }
 
-theorem opop (C: HomStruct) [Category C]: C = (C.opposite)ᵒᵖ  := by
+-- Note that this doesn't allow for the usual trick where we
+-- replace `C` by `Cᵒᵖ` in a lemma and then reduce `Cᵒᵖᵒᵖ` to `C`
+-- since this is *an equality of `HomStruct`s* and that means that
+-- we can't construct a motive where the `HomStruct` `C` has the
+-- `[Category C]` instance.
+-- We would need bundled structures to actually use this trick.
+theorem opop (C: HomStruct) : Cᵒᵖᵒᵖ = C  := by
   revert C
   intro { obj := obj, hom := hom}
   simp [HomStruct.opposite]
@@ -295,7 +301,7 @@ def yMap {c d: C.obj} (f: C.hom c d) : NatTrans (yObj c) (yObj d) := {
     simp [yObj, comp]
 }
 
-def y : Functor C (FunctorCat Cᵒᵖ Set) := {
+def y : Functor C (FunctorCat Cᵒᵖ Set.{v}) := {
   obj := yObj
   map := yMap
   map_id := by
