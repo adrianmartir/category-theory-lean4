@@ -102,6 +102,10 @@ def Category.opposite (C: Category): Category := {
 
 notation:1030 arg "ᵒᵖ"  => Category.opposite arg
 
+-- theorem op_id {C: Category} (d: C.obj): id' (C := C.base) d = id' (C := Cᵒᵖ.base) d  := by rfl
+
+-- theorem flip {C: Category} {c d e : C.obj} (f: C.hom c d) (g: C.hom d e): comp (C := C.base) f g = comp (C := Cᵒᵖ.base) g f  := by rfl
+
 theorem opop (C: HomStruct) : Cᵒᵖᵒᵖ = C  := by
   revert C
   intro { obj := obj, hom := hom}
@@ -292,7 +296,7 @@ end NatTrans
 
 section Yoneda
 
-universes u v
+universe u v
 
 
 variable {C : Category.{u,v}}
@@ -355,12 +359,11 @@ def yonedaMapInv (c : C.obj) (F: Functor Cᵒᵖ Set.{v}) (x: F.obj c) : NatTran
   app := fun d f => F.map f x
   naturality := by
     intros d e f
-    simp [y, yObj, comp]
-    apply funext
-    intros h
+    simp [y, yObj, comp, Set]
+    funext g
     -- It honestly is a bit confusing not knowing in which category
     -- the composition takes place
-    have p: comp (C := C) f h = comp (C := Cᵒᵖ) h f  := by rfl
+    have p: comp (C := C.base) f g = comp (C := Cᵒᵖ.base) g f  := by rfl
     rw [p, Functor.map_comp]
     simp [comp]
 }
@@ -371,19 +374,19 @@ theorem yoneda (c : C.obj) (F: Functor Cᵒᵖ Set.{v}) : Function.inverses (yon
     simp [yonedaMap, yonedaMapInv]
     apply funext
     intro { app := η, naturality := nat }
-    simp [comp,id',y,yObj]
+    simp [comp, id', y, yObj, Set]
     funext d f
     -- Rewrite the application in the goal as a composition in order
     -- to apply naturality
     have p: F.map f (η c (id' c)) = (comp (η c) (F.map f)) (id' c) := by rfl
     rw [p, <- nat f]
-    simp [y, yObj, comp],
+    simp [y, yObj, comp, Set],
   by
-    simp [yonedaMap, yonedaMapInv, Function.comp]
+    simp [yonedaMap, yonedaMapInv, Function.comp, Set]
     funext x
-    have p: id' (C := C) c = id' (C := Cᵒᵖ) c  := by rfl
+    have p: id' (C := C.base) c = id' (C := Cᵒᵖ.base) c  := by rfl
     rw [p, Functor.map_id]
-    simp [id']
+    simp [id', Set]
 ⟩
 
 
