@@ -21,28 +21,7 @@ notation:80 lhs " ∘ " rhs:81  => comp rhs lhs
 
 attribute [simp] id_comp comp_id assoc
 
--- Note that this is suspiciously close to the fully bundled approach
--- + unification hints. I should really try that - especially since
--- we then don't have a `IsCategory`. I doubt this is useful for anything
--- since I don't see `HomStruct` being used for anything if it is not
--- a category.
 
--- Note that while we don't know how scalable unification hints will
--- be, they may still be more performant overall because when we pass
--- a category to a function explicitly, we don't need to infer
--- anything(e.g. when considering a type of functors).
-
--- Automatic inference will only be used when using the `∘` notation.
-
--- It seems like some of the yoneda proofs need to be repaired to
--- work with bundled categories, but I think I will refactor this to
--- use unification hints for `∘` anyways.
-
--- Note that the current approach will inevitably cause trouble when
--- one tries to build an algebra-hierarchy for structures on
--- categories, since we can't automatically bundle and unbundle things.
--- Unification hints provide a solution:
--- https://github.com/leanprover/lean4/blob/master/tests/lean/unifHintAndTC.lean#L46-L53
 structure Category where
   base : HomStruct
   inst : IsCategory base
@@ -60,7 +39,7 @@ def bundle (C: HomStruct) [inst: IsCategory C] : Category where
   inst := inst
 
 -- Unbundled to bundled automatic conversion
--- THIS CAN ONLY CONSTRUCT IMPLICIT CATEGORY ARGUMENTS!
+-- This can only be used for resolving unification problems!
 unif_hint (C : Category) (base : HomStruct) [IsCategory base] where
   C =?= bundle base
   |-
@@ -297,15 +276,15 @@ def FunctorCat (C D: Category): Category := {
     id_comp := by
       intros
       apply NatTrans.ext
-      simp [id', idTrans, comp, vComp]
+      simp [idTrans, vComp]
     comp_id := by
       intros
       apply NatTrans.ext
-      simp [id', idTrans, comp, vComp]
+      simp [idTrans, vComp]
     assoc := by
       intros
       apply NatTrans.ext
-      simp [comp, vComp]
+      simp [vComp]
 }
 }
 
@@ -358,14 +337,15 @@ def y : Functor C (FunctorCat Cᵒᵖ Set.{v}) := {
   obj := yObj
   map := yMap
   map_id := by
-    intros
+    intros c
+    -- Apparently you can `simp` a hidden argument
+    simp [id', FunctorCat]
     apply NatTrans.ext
-    funext _ _
-    simp [yObj, yMap, id']
+    simp [yMap, idTrans, yObj, id', Set]
   map_comp := by
     intros
     apply NatTrans.ext
-    simp [yMap, comp, vComp]
+    simp [yMap, comp, vComp, FunctorCat, Set]
 }
 
 
