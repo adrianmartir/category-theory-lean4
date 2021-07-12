@@ -17,6 +17,19 @@ class IsCategory (C : HomStruct) where
 open HomStruct
 open IsCategory
 
+theorem IsCategory.ext (C: HomStruct):
+  (s t: IsCategory C)
+  → @comp C s = @comp C t
+  → (r: s.id' = t.id')
+  → s = t := by
+    intro {comp := sComp, id' := sId, ..}
+    intro {comp := tComp, id' := tId, ..}
+    intro p q
+    simp [id'] at q
+    simp [comp] at p
+    subst p q
+    simp
+
 notation:80 lhs " ∘ " rhs:81  => comp rhs lhs
 
 attribute [simp] id_comp comp_id assoc
@@ -44,6 +57,21 @@ unif_hint (C : Category) (base : HomStruct) [IsCategory base] where
   C =?= bundle base
   |-
   C.base =?= base
+
+
+theorem Category.ext :
+  (C D: Category)
+  → (p: C.base = D.base)
+  → C.inst ≅ D.inst
+  → C = D := by
+  intro { base := CBase, inst := CInst }
+  intro { base := DBase, inst := DInst }
+  intro p q
+  simp at p
+  simp -- applies extensionality for records
+  refine ⟨p, ?m⟩
+  subst p
+  exact q
 
 section Set
 
@@ -83,36 +111,58 @@ def HomStruct.opposite (C: HomStruct) : HomStruct := {
 
 notation:1030 arg "ᵒᵖ"  => HomStruct.opposite arg
 
-def Category.opposite (C: Category): Category := {
-  base := HomStruct.opposite C.base,
-  inst := {
-    id' := fun c => id' (C := C.base) c
-    comp := fun f g => comp (C := C.base) g f
-    id_comp := by
-      intros
-      simp
-    comp_id := by
-      intros
-      simp
-    assoc := by
-      intros
-      simp
-  }
-}
+-- We don't give the bundled version of `opposite`
+-- directly since we occasionally need this
+instance IsCategory.opposite (C: HomStruct) (s: IsCategory C) : IsCategory Cᵒᵖ where
+  id' := fun c => id' (C := C) c
+  comp := fun f g => comp (C := C) g f
+  id_comp := by
+    intros
+    simp
+  comp_id := by
+    intros
+    simp
+  assoc := by
+    intros
+    simp
+
+
+def Category.opposite (C: Category): Category where
+  base := HomStruct.opposite C.base
+  inst := IsCategory.opposite C.base C.inst
 
 notation:1030 arg "ᵒᵖ"  => Category.opposite arg
 
--- theorem op_id {C: Category} (d: C.obj): id' (C := C.base) d = id' (C := Cᵒᵖ.base) d  := by rfl
-
--- theorem flip {C: Category} {c d e : C.obj} (f: C.hom c d) (g: C.hom d e): comp (C := C.base) f g = comp (C := Cᵒᵖ.base) g f  := by rfl
-
-theorem opop (C: HomStruct) : Cᵒᵖᵒᵖ = C  := by
+@[simp] theorem HomStruct.opop (C: HomStruct) : Cᵒᵖᵒᵖ = C  := by
   revert C
   intro { obj := obj, hom := hom}
   simp [HomStruct.opposite]
 
-attribute [simp] opop
+-- set_option pp.all true in
+set_option pp.explicit true in
+  theorem IsCategory.opop (C: HomStruct) (s: IsCategory C) : opposite Cᵒᵖ (opposite C s) ≅ s := by
+    -- `rw` does not seem to work with heterogeneous
+    -- equality, which makes this had to deal with
+    have l : IsCategory Cᵒᵖᵒᵖ = IsCategory C := by
+      rw [HomStruct.opop]
+    have t := castHEq l (opposite Cᵒᵖ (opposite C s))
+    have t := HEq.symm t
+    apply HEq.trans t
+    apply heqOfEq
+    apply IsCategory.ext
+    case h.a =>
+      simp [comp, HomStruct.opposite, IsCategory.opposite, cast]
 
+set_option pp.explicit true in
+  theorem Category.opop (C: Category) : Cᵒᵖᵒᵖ = C := by
+    revert C
+    intro { base := CBase, inst := CInst }
+    apply Category.ext
+    case p =>
+      exact HomStruct.opop CBase
+    case a =>
+      simp [Category.opposite]
+      apply IsCategory.opop
 
 def inverses (C: Category) {c d: C.obj} (f: C.hom c d) (g: C.hom d c) := g ∘ f = id' c ∧ f ∘ g = id' d
 
@@ -135,14 +185,11 @@ def inverses (f: A → B) (g: B → A) :=
 
 theorem inverses_sym (f: A → B) (g: B → A) : inverses f g <-> inverses g f := by
   simp [inverses]
-  exact ⟨
-    by
-      intro ⟨p,q⟩
-      exact ⟨q,p⟩,
-    by
-      intro ⟨p,q⟩
-      exact ⟨q,p⟩
-  ⟩
+  constructor
+  case mp =>
+    simp_all
+  case mpr =>
+    simp_all
 
 
 def isomorphism (f: A → B) :=
@@ -166,9 +213,7 @@ theorem Functor.ext {C D : Category}: (F G : Functor C D) → (p: F.obj = G.obj)
   intro { obj := F, map := FMap, ..}
   intro { obj := G, map := GMap, ..}
   intro p q
-  simp at p q
-  simp -- applies propext
-  exact ⟨p,q⟩
+  simp_all
 
 
 def fId (C: Category) : Functor C C := {
@@ -351,6 +396,11 @@ def y : Functor C (FunctorCat Cᵒᵖ Set.{v}) := {
     apply NatTrans.ext
     simp [yMap, comp, vComp, FunctorCat, Set]
 }
+
+def y_op : Functor Cᵒᵖ (FunctorCat C Set.{v}) := by
+  have x := y (C := Cᵒᵖ)
+  rw [<- opop C.base]
+  exact x
 
 
 def yonedaMap (c : C.obj) (F: Functor Cᵒᵖ Set.{v}) (η: NatTrans (y.obj c) F) : F.obj c := η.app c (id' c)
