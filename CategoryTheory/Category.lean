@@ -58,7 +58,8 @@ unif_hint (C : Category) (base : HomStruct) [IsCategory base] where
   |-
   C.base =?= base
 
-
+-- set_option trace.Meta.Tactic.subst true in
+set_option pp.explicit true in
 theorem Category.ext :
   (C D: Category)
   → (p: C.base = D.base)
@@ -111,25 +112,22 @@ def HomStruct.opposite (C: HomStruct) : HomStruct := {
 
 notation:1030 arg "ᵒᵖ"  => HomStruct.opposite arg
 
--- We don't give the bundled version of `opposite`
--- directly since we occasionally need this
-instance IsCategory.opposite (C: HomStruct) (s: IsCategory C) : IsCategory Cᵒᵖ where
-  id' := fun c => id' (C := C) c
-  comp := fun f g => comp (C := C) g f
-  id_comp := by
-    intros
-    simp
-  comp_id := by
-    intros
-    simp
-  assoc := by
-    intros
-    simp
-
 
 def Category.opposite (C: Category): Category where
   base := HomStruct.opposite C.base
-  inst := IsCategory.opposite C.base C.inst
+  inst := {
+    id' := fun c => id' (C := C.base) c
+    comp := fun f g => comp (C := C.base) g f
+    id_comp := by
+      intros
+      simp
+    comp_id := by
+      intros
+      simp
+    assoc := by
+      intros
+      simp
+  }
 
 notation:1030 arg "ᵒᵖ"  => Category.opposite arg
 
@@ -138,31 +136,28 @@ notation:1030 arg "ᵒᵖ"  => Category.opposite arg
   intro { obj := obj, hom := hom}
   simp [HomStruct.opposite]
 
--- set_option pp.all true in
-set_option pp.explicit true in
-  theorem IsCategory.opop (C: HomStruct) (s: IsCategory C) : opposite Cᵒᵖ (opposite C s) ≅ s := by
-    -- `rw` does not seem to work with heterogeneous
-    -- equality, which makes this had to deal with
-    have l : IsCategory Cᵒᵖᵒᵖ = IsCategory C := by
-      rw [HomStruct.opop]
-    have t := castHEq l (opposite Cᵒᵖ (opposite C s))
-    have t := HEq.symm t
-    apply HEq.trans t
-    apply heqOfEq
-    apply IsCategory.ext
-    case h.a =>
-      simp [comp, HomStruct.opposite, IsCategory.opposite, cast]
 
-set_option pp.explicit true in
-  theorem Category.opop (C: Category) : Cᵒᵖᵒᵖ = C := by
-    revert C
-    intro { base := CBase, inst := CInst }
-    apply Category.ext
-    case p =>
-      exact HomStruct.opop CBase
-    case a =>
-      simp [Category.opposite]
-      apply IsCategory.opop
+-- This innocent-looking proof took a long time to write.
+-- The insight is that we *cannot* apply `HomStruct.opposite`
+-- because because that breaks type checking for `inst`
+-- part of the category. Instead, we expand the opposite
+-- definitions until the `inst` fields are in definitionally
+-- equal types. At this point we can simply reduce our
+-- heterogeneous equality to a regular equality and
+-- everything is easy.
+-- set_option pp.explicit true in
+@[simp] theorem Category.opop (C: Category) : Cᵒᵖᵒᵖ = C := by
+  revert C
+  intro { base := { obj := obj, hom := hom}, inst := inst }
+  simp [HomStruct.opposite, opposite]
+
+  apply heqOfEq
+  apply IsCategory.ext
+  case h.a =>
+    simp [comp]
+  case h.r =>
+    simp [id']
+
 
 def inverses (C: Category) {c d: C.obj} (f: C.hom c d) (g: C.hom d c) := g ∘ f = id' c ∧ f ∘ g = id' d
 
@@ -399,7 +394,7 @@ def y : Functor C (FunctorCat Cᵒᵖ Set.{v}) := {
 
 def y_op : Functor Cᵒᵖ (FunctorCat C Set.{v}) := by
   have x := y (C := Cᵒᵖ)
-  rw [<- opop C.base]
+  rw [C.opop] at x
   exact x
 
 
