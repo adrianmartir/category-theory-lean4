@@ -104,7 +104,7 @@ def Set : LargeCategory where
 
 end Set
 
-
+@[reducible]
 def HomStruct.opposite (C: HomStruct) : HomStruct := {
   obj := C.obj
   hom := fun f g => C.hom g f
@@ -112,7 +112,7 @@ def HomStruct.opposite (C: HomStruct) : HomStruct := {
 
 notation:1030 arg "ᵒᵖ"  => HomStruct.opposite arg
 
-
+@[reducible]
 def Category.opposite (C: Category): Category where
   base := HomStruct.opposite C.base
   inst := {
@@ -134,7 +134,7 @@ notation:1030 arg "ᵒᵖ"  => Category.opposite arg
 @[simp] theorem HomStruct.opop (C: HomStruct) : Cᵒᵖᵒᵖ = C  := by
   revert C
   intro { obj := obj, hom := hom}
-  simp [HomStruct.opposite]
+  simp
 
 
 -- This innocent-looking proof took a long time to write.
@@ -149,14 +149,20 @@ notation:1030 arg "ᵒᵖ"  => Category.opposite arg
 @[simp] theorem Category.opop (C: Category) : Cᵒᵖᵒᵖ = C := by
   revert C
   intro { base := { obj := obj, hom := hom}, inst := inst }
-  simp [HomStruct.opposite, opposite]
-
-  apply heqOfEq
-  apply IsCategory.ext
-  case h.a =>
-    simp [comp]
-  case h.r =>
-    simp [id']
+  apply Category.ext
+  case p =>
+    rfl
+  case a =>
+    apply heqOfEq
+    apply IsCategory.ext
+    case h.a =>
+      -- Here we need to actually expand `comp` for the opposite
+      -- category, which currently is a barrier
+      -- to having `C` be definitionally equal to `Cᵒᵖᵒᵖ`
+      simp [↑comp]
+      -- Moreover, `simp only` doesn't even work here.
+    case h.r =>
+      simp [id']
 
 
 def inverses (C: Category) {c d: C.obj} (f: C.hom c d) (g: C.hom d c) := g ∘ f = id' c ∧ f ∘ g = id' d
@@ -342,40 +348,61 @@ universe u v
 variable {C : Category.{u,v}}
 
 
-def yObj (c: C.obj) : (Functor Cᵒᵖ Set.{v}) := {
-    obj := fun d => C.hom d c
-    -- f gets sent to precomposition with f
-    map := fun f g => g ∘ f
-    map_id := by
-      intro d
-      simp
-      funext f
-      -- While it seems like the lhs can be simplified, this is not true
-      -- since `id'` is in `Cᵒᵖ` and not in `C`
-      -- I need a better solution for this...
-      -- We could try to state this lemma in general in order to apply it
-      -- here and in similar cases
-      have p: id' (C := C.base) d = id' (C := Cᵒᵖ.base) d  := by rfl
-      rw [<- p]
-      simp
-      rfl
+def yObj (c: C.obj) : (Functor Cᵒᵖ Set.{v}) where
+  obj := fun d => C.hom d c
+  -- f gets sent to precomposition with f
+  map := fun f g => g ∘ f
+  map_id := by
+    intro d
+    simp
+    funext f
+    -- While it seems like the lhs can be simplified, this is not true
+    -- since `id'` is in `Cᵒᵖ` and not in `C`
+    -- I need a better solution for this...
+    -- We could try to state this lemma in general in order to apply it
+    -- here and in similar cases
+    have p: id' (C := C.base) d = id' (C := Cᵒᵖ.base) d  := by rfl
+    rw [<- p]
+    simp
+    rfl
 
-    map_comp := by
-      intros x y z f g
-      simp
-      funext h
-      have p: comp (C := C.base) g f = comp (C := Cᵒᵖ.base) f g  := by rfl
-      rw [<- p]
-      simp [comp, Set]
-  }
+  map_comp := by
+    intros x y z f g
+    simp
+    funext h
+    have p: comp (C := C.base) g f = comp (C := Cᵒᵖ.base) f g  := by rfl
+    rw [<- p]
+    simp [comp, Set]
 
 
-def yMap {c d: C.obj} (f: C.hom c d) : NatTrans (yObj c) (yObj d) := {
-  app := fun c g => f ∘ g
+def yObjOp (c: C.obj) : (Functor C Set.{v}) where
+  obj := fun d => C.hom c d
+  -- f gets sent to postcomposition with f
+  map := fun f g => f ∘ g
+  map_id := by
+    intro d
+    simp
+    funext f
+    rfl
+  map_comp := by
+    intros x y z f g
+    simp
+    funext h
+    simp [comp, Set]
+
+
+def yMap {c d: C.obj} (f: C.hom c d) : NatTrans (yObj c) (yObj d) where
+  app := fun e g => f ∘ g
   naturality := by
     intros
     simp [yObj, comp, Set]
-}
+
+
+def yMapOp {c d: C.obj} (f: C.hom d c) : NatTrans (yObjOp c) (yObjOp d) where
+  app := fun e g => g ∘ f
+  naturality := by
+    intros
+    simp [yObjOp, comp, Set]
 
 def y : Functor C (FunctorCat Cᵒᵖ Set.{v}) := {
   obj := yObj
@@ -392,13 +419,17 @@ def y : Functor C (FunctorCat Cᵒᵖ Set.{v}) := {
     simp [yMap, comp, vComp, FunctorCat, Set]
 }
 
-def y_op : Functor Cᵒᵖ (FunctorCat C Set.{v}) := by
+def yOp : Functor Cᵒᵖ (FunctorCat C Set.{v}) := by
   have x := y (C := Cᵒᵖ)
   rw [C.opop] at x
   exact x
 
 
 def yonedaMap (c : C.obj) (F: Functor Cᵒᵖ Set.{v}) (η: NatTrans (y.obj c) F) : F.obj c := η.app c (id' c)
+
+def yonedaMapOp (c : C.obj) (F: Functor C Set.{v}) (η: NatTrans ((y (C := Cᵒᵖ)).obj c) F) : F.obj c := η.app c (by
+  simp [yOp]
+  )
 
 def yonedaMapInv (c : C.obj) (F: Functor Cᵒᵖ Set.{v}) (x: F.obj c) : NatTrans (y.obj c) F := {
   app := fun d f => F.map f x
