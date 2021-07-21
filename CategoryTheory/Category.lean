@@ -39,13 +39,13 @@ instance Set.Category : LargeCategory Set :=
   comp    := fun f g x => g (f x)
   id_comp := by
     intros
-    simp [id', comp]
+    simp
   comp_id := by
     intros
-    simp [id', comp]
+    simp
   assoc := by
     intros
-    simp [comp]
+    simp
 }
 
 end Set
