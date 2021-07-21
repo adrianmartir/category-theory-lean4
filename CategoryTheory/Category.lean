@@ -131,11 +131,9 @@ def Category.opposite (C: Category): Category where
 
 notation:1030 arg "ᵒᵖ"  => Category.opposite arg
 
-@[simp] theorem HomStruct.opop (C: HomStruct) : Cᵒᵖᵒᵖ = C  := by
-  revert C
-  intro { obj := obj, hom := hom}
-  simp
-
+@[simp] theorem HomStruct.opop (C: HomStruct) : Cᵒᵖᵒᵖ = C  :=
+  match C with
+  | { obj := obj, hom := hom } => rfl
 
 -- This innocent-looking proof took a long time to write.
 -- The insight is that we *cannot* apply `HomStruct.opposite`
