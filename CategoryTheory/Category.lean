@@ -360,15 +360,15 @@ theorem y_fully_faithful: fully_faithful (y (C := C)) := by
   -- The crucial insight is that `y.map` is in fact equal to `yonedaMapInverse` and thus by the yoneda lemma has an inverse
   have yoneda := yoneda c (y.obj d)
 
-  exact ⟨ yonedaMap c (y.obj d), by
-    have p: yonedaMapInv c (Functor.obj y d) = y.map := by
-      funext f
-      apply NatTrans.ext
-      simp [yonedaMapInv, y, yMap, yObj]
+  refine ⟨ yonedaMap c (y.obj d), ?_ ⟩
 
-    rw [<- p, Function.inverses_sym]
-    exact yoneda
-  ⟩
+  have p: yonedaMapInv c (Functor.obj y d) = y.map := by
+    funext f
+    apply NatTrans.ext
+    simp [yonedaMapInv, y, yMap, yObj]
+
+  rw [<- p, Function.inverses_sym]
+  exact yoneda
 
 end Yoneda
 
