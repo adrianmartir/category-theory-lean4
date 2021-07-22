@@ -322,11 +322,10 @@ def yonedaMapInv (c : C.obj) (F: Functor Cᵒᵖ Set.{v}) (x: F.obj c) : NatTran
   naturality := by
     intros d e f
     simp [y, yObj, comp]
-    apply funext
-    intros h
+    funext g
     -- It honestly is a bit confusing not knowing in which category
     -- the composition takes place
-    have p: comp (C := C) f h = comp (C := Cᵒᵖ) h f  := by rfl
+    have p: comp (C := C) f g = comp (C := Cᵒᵖ) g f  := by rfl
     rw [p, Functor.map_comp]
     simp [comp]
 }
